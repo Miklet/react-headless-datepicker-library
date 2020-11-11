@@ -92,11 +92,13 @@ export function DatePicker() {
                 return (
                   <CalendarWeekRow key={weekIndex}>
                     {week.map((day, index) => {
-                      return typeof day === 'number' ? (
+                      return day === null ? (
                         <CalendarDayCell key={index} />
                       ) : (
                         <CalendarDayCell
                           key={day.date.getTime()}
+                          isSelected={day.isSelected}
+                          isPreselected={day.isPreselected}
                           {...getDateButtonProps(day.date)}
                         >
                           {day.date.getDate()}

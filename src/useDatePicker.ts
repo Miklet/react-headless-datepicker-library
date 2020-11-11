@@ -9,10 +9,17 @@ import {
   isValid,
   startOfWeek,
   endOfWeek,
+  isSameDay,
 } from 'date-fns';
 import { createFocusTrap, FocusTrap } from 'focus-trap';
 import { useId } from '@reach/auto-id';
 import { range } from './utils';
+
+type CalendarDay = {
+  date: Date;
+  isSelected: boolean;
+  isPreselected: boolean;
+};
 
 /**
  * Accessibility practices implemented according to https://w3c.github.io/aria-practices/examples/dialog-modal/datepicker-dialog.html
@@ -56,21 +63,25 @@ function useDatePicker() {
         weeks.push([]);
       }
 
+      const currentDateOfWeek = new Date(
+        currentPreselectedYear,
+        currentPreselectedMonth,
+        value
+      );
+
       weeks[weeks.length - 1].push(
         value === -1
-          ? value
+          ? null
           : {
-              date: new Date(
-                currentPreselectedYear,
-                currentPreselectedMonth,
-                value
-              ),
+              date: currentDateOfWeek,
+              isSelected: isSameDay(currentDateOfWeek, selectedDate),
+              isPreselected: isSameDay(currentDateOfWeek, preselectedDate),
             }
       );
 
       return weeks;
     },
-    [] as Array<Array<number | { date: Date }>>
+    [] as Array<Array<null | CalendarDay>>
   );
 
   React.useEffect(() => {
