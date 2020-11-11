@@ -1,12 +1,18 @@
 import styled from 'styled-components';
 
-export const WeekHeadRow = styled.tr``;
+export const Calendar = styled.div`
+  position: absolute;
+`;
 
-export const WeekHeadCell = styled.th``;
+export const CalendarGrid = styled.table``;
 
-export const WeekBodyRow = styled.tr``;
+export const CalendarWeekNamesRow = styled.tr``;
 
-export const WeekBodyCell = styled.td`
+export const CalendarWeekNameHeader = styled.th``;
+
+export const CalendarWeekRow = styled.tr``;
+
+export const CalendarDayCell = styled.td`
   padding: 8px;
   width: 32px;
   height: 32px;

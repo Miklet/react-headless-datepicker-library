@@ -7,8 +7,11 @@ import {
   parse,
   isDate,
   isValid,
+  startOfWeek,
+  endOfWeek,
 } from 'date-fns';
 import { createFocusTrap, FocusTrap } from 'focus-trap';
+import { useId } from '@reach/auto-id';
 import { range } from './utils';
 
 /**
@@ -26,16 +29,19 @@ function useDatePicker() {
   const openButtonRef = React.useRef<HTMLButtonElement | null>(null);
 
   const focusTrapRef = React.useRef<FocusTrap | null>(null);
-  const datesRefs = React.useRef<Array<HTMLElement | null>>([]);
+  const daysNodesRefs = React.useRef<Array<HTMLElement | null>>([]);
+  const canUpdateFocusedDay = React.useRef(true);
 
-  const currentDay = preselectedDate.getDate();
-  const currentMonth = preselectedDate.getMonth();
-  const currentYear = preselectedDate.getFullYear();
+  const currentMonthLiveRegionId = useId();
+
+  const currentPreselectedDate = preselectedDate.getDate();
+  const currentPreselectedMonth = preselectedDate.getMonth();
+  const currentPreselectedYear = preselectedDate.getFullYear();
 
   const daysInMonth = getDaysInMonth(preselectedDate);
   const firstDayOfWeekForCurrentMonthView = new Date(
-    currentYear,
-    currentMonth,
+    currentPreselectedYear,
+    currentPreselectedMonth,
     0
   ).getDay();
 
@@ -53,7 +59,13 @@ function useDatePicker() {
       weeks[weeks.length - 1].push(
         value === -1
           ? value
-          : { date: new Date(currentYear, currentMonth, value) }
+          : {
+              date: new Date(
+                currentPreselectedYear,
+                currentPreselectedMonth,
+                value
+              ),
+            }
       );
 
       return weeks;
@@ -67,7 +79,8 @@ function useDatePicker() {
         if (!focusTrapRef.current) {
           focusTrapRef.current = createFocusTrap(rootRef.current, {
             onActivate: () => {
-              const currentDateNode = datesRefs.current[selectedDate.getDate()];
+              const currentDateNode =
+                daysNodesRefs.current[selectedDate.getDate()];
 
               if (currentDateNode) {
                 currentDateNode.focus();
@@ -77,12 +90,9 @@ function useDatePicker() {
               setIsOpen(false);
               window.setTimeout(() => openButtonRef.current?.focus(), 0);
             },
-
             clickOutsideDeactivates: true,
           });
 
-          focusTrapRef.current.activate();
-        } else {
           focusTrapRef.current.activate();
         }
       }
@@ -100,12 +110,12 @@ function useDatePicker() {
   }, [isOpen, selectedDate]);
 
   React.useEffect(() => {
-    const currentPreselectedDate = datesRefs.current[currentDay];
+    const currentPreselectedDay = daysNodesRefs.current[currentPreselectedDate];
 
-    if (currentPreselectedDate) {
-      currentPreselectedDate.focus();
+    if (canUpdateFocusedDay.current && currentPreselectedDay) {
+      currentPreselectedDay.focus();
     }
-  }, [currentDay]);
+  }, [preselectedDate]);
 
   return {
     isOpen,
@@ -115,6 +125,9 @@ function useDatePicker() {
 
     getRootProps() {
       return {
+        role: 'dialog' as const,
+        ['aria-modal']: true,
+        ['aria-labelledby']: 'Choose date',
         ref(node: HTMLElement | null) {
           rootRef.current = node;
         },
@@ -190,6 +203,7 @@ function useDatePicker() {
       return {
         ['aria-label']: 'Next month',
         onClick() {
+          canUpdateFocusedDay.current = false;
           setPreselectedDate(addMonths(preselectedDate, -1));
         },
       };
@@ -199,6 +213,7 @@ function useDatePicker() {
       return {
         ['aria-label']: 'Previous month',
         onClick() {
+          canUpdateFocusedDay.current = false;
           setPreselectedDate(addMonths(preselectedDate, 1));
         },
       };
@@ -206,20 +221,28 @@ function useDatePicker() {
 
     getLiveRegionProps() {
       return {
+        id: currentMonthLiveRegionId,
         ['aria-live']: 'polite' as const,
+      };
+    },
+
+    getGridProps() {
+      return {
+        role: 'grid' as const,
+        ['aria-labelledby']: currentMonthLiveRegionId,
       };
     },
 
     getDateButtonProps(date: Date) {
       return {
-        role: 'button',
-        ['aria-disabled']: false,
         ['aria-label']: date.toDateString(),
         ref(node: HTMLElement | null) {
-          datesRefs.current[date.getDate()] = node;
+          daysNodesRefs.current[date.getDate()] = node;
         },
-        tabIndex: date.getDate() === currentDay ? 0 : -1,
+        tabIndex: date.getDate() === currentPreselectedDate ? 0 : -1,
         onKeyDown(event: React.KeyboardEvent<HTMLElement>) {
+          canUpdateFocusedDay.current = true;
+
           if (event.key === 'ArrowRight') {
             setPreselectedDate(addDays(preselectedDate, 1));
           } else if (event.key === 'ArrowLeft') {
@@ -228,6 +251,22 @@ function useDatePicker() {
             setPreselectedDate(addDays(preselectedDate, -7));
           } else if (event.key === 'ArrowDown') {
             setPreselectedDate(addDays(preselectedDate, 7));
+          } else if (event.key === 'Home') {
+            setPreselectedDate(
+              startOfWeek(preselectedDate, {
+                weekStartsOn: 1,
+              })
+            );
+          } else if (event.key === 'End') {
+            setPreselectedDate(
+              endOfWeek(preselectedDate, {
+                weekStartsOn: 1,
+              })
+            );
+          } else if (event.key === 'PageUp') {
+            setPreselectedDate(addMonths(preselectedDate, -1));
+          } else if (event.key === 'PageDown') {
+            setPreselectedDate(addMonths(preselectedDate, 1));
           } else if (event.key === 'Enter' || event.key === 'Space') {
             event.preventDefault();
 
@@ -239,8 +278,6 @@ function useDatePicker() {
             }
 
             focusTrapRef.current?.deactivate();
-            // setIsOpen(false);
-            // openButtonRef.current?.focus();
           }
         },
         onClick() {
@@ -252,8 +289,6 @@ function useDatePicker() {
           }
 
           focusTrapRef.current?.deactivate();
-          // setIsOpen(false);
-          // openButtonRef.current?.focus();
         },
       };
     },

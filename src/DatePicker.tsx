@@ -1,10 +1,12 @@
 import React from 'react';
 
 import {
-  WeekHeadRow,
-  WeekHeadCell,
-  WeekBodyRow,
-  WeekBodyCell,
+  CalendarWeekNamesRow,
+  CalendarWeekNameHeader,
+  CalendarWeekRow,
+  CalendarDayCell,
+  Calendar,
+  CalendarGrid,
 } from './DatePicker.styles';
 
 import { useDatePicker } from './useDatePicker';
@@ -39,9 +41,10 @@ export function DatePicker() {
     isOpen,
     weeks,
     preselectedDate,
-    getRootProps,
     getInputProps,
     getOpenButtonProps,
+    getRootProps,
+    getGridProps,
     getPrevMonthButtonProps,
     getNextMonthButtonProps,
     getLiveRegionProps,
@@ -57,7 +60,7 @@ export function DatePicker() {
         <button {...openButtonProps}>📅</button>
       </div>
       {isOpen ? (
-        <div {...getRootProps()} style={{ position: 'absolute' }}>
+        <Calendar {...getRootProps()}>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <div {...getLiveRegionProps()}>
               {MONTHS_OF_YEAR_NAMES[preselectedDate.getMonth()]}{' '}
@@ -68,44 +71,44 @@ export function DatePicker() {
               <button {...getPrevMonthButtonProps()}>⬇</button>
             </div>
           </div>
-          <table role="grid">
+          <CalendarGrid {...getGridProps()}>
             <thead>
-              <WeekHeadRow>
+              <CalendarWeekNamesRow>
                 {DAYS_OF_WEEK_NAMES.map(dayOfWeekName => {
                   return (
-                    <WeekHeadCell
+                    <CalendarWeekNameHeader
                       key={dayOfWeekName}
                       scope="col"
                       abbr={dayOfWeekName}
                     >
                       {dayOfWeekName.substr(0, 2)}
-                    </WeekHeadCell>
+                    </CalendarWeekNameHeader>
                   );
                 })}
-              </WeekHeadRow>
+              </CalendarWeekNamesRow>
             </thead>
             <tbody>
               {weeks.map((week, weekIndex) => {
                 return (
-                  <WeekBodyRow key={weekIndex}>
+                  <CalendarWeekRow key={weekIndex}>
                     {week.map((day, index) => {
                       return typeof day === 'number' ? (
-                        <WeekBodyCell key={index} />
+                        <CalendarDayCell key={index} />
                       ) : (
-                        <WeekBodyCell
-                          key={index}
+                        <CalendarDayCell
+                          key={day.date.getTime()}
                           {...getDateButtonProps(day.date)}
                         >
                           {day.date.getDate()}
-                        </WeekBodyCell>
+                        </CalendarDayCell>
                       );
                     })}
-                  </WeekBodyRow>
+                  </CalendarWeekRow>
                 );
               })}
             </tbody>
-          </table>
-        </div>
+          </CalendarGrid>
+        </Calendar>
       ) : null}
     </div>
   );
