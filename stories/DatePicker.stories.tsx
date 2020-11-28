@@ -1,6 +1,7 @@
 import React from 'react';
-import { Meta, Story } from '@storybook/react';
-import { DatePicker } from '../src/DatePicker';
+import { Meta } from '@storybook/react';
+import { DatePicker } from './DatePicker';
+import { addDays, isBefore, isSameDay } from 'date-fns';
 
 const meta: Meta = {
   title: 'DatePicker',
@@ -13,10 +14,13 @@ const meta: Meta = {
 
 export default meta;
 
-const Template: Story = () => <DatePicker />;
+export const Default = () => <DatePicker />;
 
-// By passing using the Args format for exported stories, you can control the props for a component for reuse in a test
-// https://storybook.js.org/docs/react/workflows/unit-testing
-export const Default = Template.bind({});
+export const MinAndMax = () => (
+  <DatePicker
+    minDate={addDays(new Date(), -14)}
+    maxDate={addDays(new Date(), 14)}
+  />
+);
 
 Default.args = {};

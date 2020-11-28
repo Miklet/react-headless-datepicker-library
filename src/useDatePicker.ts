@@ -10,6 +10,11 @@ import {
   startOfWeek,
   endOfWeek,
   isSameDay,
+  isWithinInterval,
+  lastDayOfMonth,
+  setDate,
+  isBefore,
+  isAfter,
 } from 'date-fns';
 import { createFocusTrap, FocusTrap } from 'focus-trap';
 import { useId } from '@reach/auto-id';
@@ -19,18 +24,24 @@ type CalendarDay = {
   date: Date;
   isSelected: boolean;
   isPreselected: boolean;
+  isBlocked: boolean;
+};
+
+type Props = {
+  minDate?: Date;
+  maxDate?: Date;
 };
 
 /**
  * Accessibility practices implemented according to https://w3c.github.io/aria-practices/examples/dialog-modal/datepicker-dialog.html
  */
-function useDatePicker() {
+function useDatePicker({ minDate, maxDate }: Props) {
   const [isOpen, setIsOpen] = React.useState(false);
-  const [selectedDate, setSelectedDate] = React.useState(new Date());
+  const [selectedDate, setSelectedDate] = React.useState<Date | null>(null);
   const [selectedDraftDateString, setSelectedDraftDateString] = React.useState<
     string | null
   >(null);
-  const [preselectedDate, setPreselectedDate] = React.useState(selectedDate);
+  const [preselectedDate, setPreselectedDate] = React.useState(new Date());
 
   const rootRef = React.useRef<HTMLElement | null>(null);
   const openButtonRef = React.useRef<HTMLButtonElement | null>(null);
@@ -46,6 +57,7 @@ function useDatePicker() {
   const currentPreselectedYear = preselectedDate.getFullYear();
 
   const daysInMonth = getDaysInMonth(preselectedDate);
+
   const firstDayOfWeekForCurrentMonthView = new Date(
     currentPreselectedYear,
     currentPreselectedMonth,
@@ -56,6 +68,30 @@ function useDatePicker() {
     ...range(firstDayOfWeekForCurrentMonthView, () => -1),
     ...range(daysInMonth, index => index + 1),
   ];
+
+  function isDateOutsideOfRange({
+    date,
+    minDate,
+    maxDate,
+  }: {
+    date: Date;
+    minDate?: Date;
+    maxDate?: Date;
+  }): boolean {
+    if (minDate && !maxDate) {
+      return isBefore(date, minDate);
+    }
+
+    if (maxDate && !minDate) {
+      return isAfter(date, maxDate);
+    }
+
+    if (minDate && maxDate) {
+      return isBefore(date, minDate) && isAfter(date, maxDate);
+    }
+
+    return false;
+  }
 
   const weeksForCurrentMonthView = daysForCurrentMonthView.reduce(
     (weeks, value, index) => {
@@ -74,8 +110,16 @@ function useDatePicker() {
           ? null
           : {
               date: currentDateOfWeek,
-              isSelected: isSameDay(currentDateOfWeek, selectedDate),
+              isSelected:
+                selectedDate !== null
+                  ? isSameDay(currentDateOfWeek, selectedDate)
+                  : false,
               isPreselected: isSameDay(currentDateOfWeek, preselectedDate),
+              isBlocked: isDateOutsideOfRange({
+                date: currentDateOfWeek,
+                minDate,
+                maxDate,
+              }),
             }
       );
 
@@ -90,11 +134,14 @@ function useDatePicker() {
         if (!focusTrapRef.current) {
           focusTrapRef.current = createFocusTrap(rootRef.current, {
             onActivate: () => {
-              const currentDateNode =
-                daysNodesRefs.current[selectedDate.getDate()];
+              const dateToFocus = selectedDate
+                ? selectedDate.getDate()
+                : preselectedDate.getDate();
 
-              if (currentDateNode) {
-                currentDateNode.focus();
+              const dateToFocusNode = daysNodesRefs.current[dateToFocus];
+
+              if (dateToFocusNode) {
+                dateToFocusNode.focus();
               }
             },
             onDeactivate: () => {
@@ -128,6 +175,22 @@ function useDatePicker() {
     }
   }, [preselectedDate]);
 
+  function internalSetSelectedDate(date: Date) {
+    if (isDateOutsideOfRange({ date, minDate, maxDate })) {
+      return;
+    }
+
+    setSelectedDate(date);
+  }
+
+  function internalSetPreselectedDate(date: Date) {
+    if (isDateOutsideOfRange({ date, minDate, maxDate })) {
+      return;
+    }
+
+    setPreselectedDate(date);
+  }
+
   return {
     isOpen,
     selectedDate,
@@ -145,14 +208,16 @@ function useDatePicker() {
       };
     },
 
-    getInputProps() {
+    getDateInputProps() {
       return {
         type: 'text',
         ['aria-label']: 'Date',
         value:
           selectedDraftDateString !== null
             ? selectedDraftDateString
-            : format(selectedDate, 'dd/MM/yyyy'),
+            : selectedDate
+            ? format(selectedDate, 'dd/MM/yyyy')
+            : '',
         onBlur() {
           if (selectedDraftDateString !== null) {
             const parsedDate = parse(
@@ -202,7 +267,10 @@ function useDatePicker() {
       return {
         ref: openButtonRef,
         ['aria-label']: selectedDate
-          ? `Change date, selected date is ${selectedDate.toDateString()}`
+          ? `Change date, selected date is ${format(
+              selectedDate,
+              'dd/MM/yyyy'
+            )}`
           : 'Choose date',
         onClick() {
           setIsOpen(prevIsOpen => !prevIsOpen);
@@ -212,7 +280,12 @@ function useDatePicker() {
 
     getPrevMonthButtonProps() {
       return {
-        ['aria-label']: 'Next month',
+        disabled: isDateOutsideOfRange({
+          date: lastDayOfMonth(addMonths(preselectedDate, 1)),
+          minDate,
+          maxDate,
+        }),
+        ['aria-label']: 'Previous month',
         onClick() {
           canUpdateFocusedDay.current = false;
           setPreselectedDate(addMonths(preselectedDate, -1));
@@ -222,7 +295,12 @@ function useDatePicker() {
 
     getNextMonthButtonProps() {
       return {
-        ['aria-label']: 'Previous month',
+        disabled: isDateOutsideOfRange({
+          date: setDate(addMonths(preselectedDate, 1), 1),
+          minDate,
+          maxDate,
+        }),
+        ['aria-label']: 'Next month',
         onClick() {
           canUpdateFocusedDay.current = false;
           setPreselectedDate(addMonths(preselectedDate, 1));
@@ -230,7 +308,7 @@ function useDatePicker() {
       };
     },
 
-    getLiveRegionProps() {
+    getCurrentMonthLiveRegionProps() {
       return {
         id: currentMonthLiveRegionId,
         ['aria-live']: 'polite' as const,
@@ -239,50 +317,60 @@ function useDatePicker() {
 
     getGridProps() {
       return {
-        role: 'grid' as const,
+        role: 'grid',
         ['aria-labelledby']: currentMonthLiveRegionId,
       };
     },
 
-    getDateButtonProps(date: Date) {
+    getGridItemProps() {
       return {
-        ['aria-label']: date.toDateString(),
+        role: 'gridcell',
+      };
+    },
+
+    getDayButtonProps(day: CalendarDay) {
+      return {
+        ['aria-label']: day.date.toDateString(),
         ref(node: HTMLElement | null) {
-          daysNodesRefs.current[date.getDate()] = node;
+          daysNodesRefs.current[day.date.getDate()] = node;
         },
-        tabIndex: date.getDate() === currentPreselectedDate ? 0 : -1,
+        tabIndex:
+          !day.isBlocked && day.date.getDate() === currentPreselectedDate
+            ? 0
+            : -1,
+        disabled: day.isBlocked,
         onKeyDown(event: React.KeyboardEvent<HTMLElement>) {
           canUpdateFocusedDay.current = true;
 
           if (event.key === 'ArrowRight') {
-            setPreselectedDate(addDays(preselectedDate, 1));
+            internalSetPreselectedDate(addDays(preselectedDate, 1));
           } else if (event.key === 'ArrowLeft') {
-            setPreselectedDate(addDays(preselectedDate, -1));
+            internalSetPreselectedDate(addDays(preselectedDate, -1));
           } else if (event.key === 'ArrowUp') {
-            setPreselectedDate(addDays(preselectedDate, -7));
+            internalSetPreselectedDate(addDays(preselectedDate, -7));
           } else if (event.key === 'ArrowDown') {
-            setPreselectedDate(addDays(preselectedDate, 7));
+            internalSetPreselectedDate(addDays(preselectedDate, 7));
           } else if (event.key === 'Home') {
-            setPreselectedDate(
+            internalSetPreselectedDate(
               startOfWeek(preselectedDate, {
                 weekStartsOn: 1,
               })
             );
           } else if (event.key === 'End') {
-            setPreselectedDate(
+            internalSetPreselectedDate(
               endOfWeek(preselectedDate, {
                 weekStartsOn: 1,
               })
             );
           } else if (event.key === 'PageUp') {
-            setPreselectedDate(addMonths(preselectedDate, -1));
+            internalSetPreselectedDate(addMonths(preselectedDate, -1));
           } else if (event.key === 'PageDown') {
-            setPreselectedDate(addMonths(preselectedDate, 1));
+            internalSetPreselectedDate(addMonths(preselectedDate, 1));
           } else if (event.key === 'Enter' || event.key === 'Space') {
             event.preventDefault();
 
-            setSelectedDate(preselectedDate);
-            setPreselectedDate(preselectedDate);
+            internalSetSelectedDate(preselectedDate);
+            internalSetPreselectedDate(preselectedDate);
 
             if (selectedDraftDateString) {
               setSelectedDraftDateString(null);
@@ -292,8 +380,8 @@ function useDatePicker() {
           }
         },
         onClick() {
-          setSelectedDate(date);
-          setPreselectedDate(date);
+          internalSetSelectedDate(day.date);
+          internalSetPreselectedDate(day.date);
 
           if (selectedDraftDateString) {
             setSelectedDraftDateString(null);
