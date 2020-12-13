@@ -174,7 +174,7 @@ function useDatePicker({ minDate, maxDate }: Props = {}) {
       return {
         role: 'dialog' as const,
         'aria-modal': true,
-        'aria-labelledby': 'Choose date',
+        'aria-label': 'Choose date',
         ref(node: HTMLElement | null) {
           rootRef.current = node;
         },
