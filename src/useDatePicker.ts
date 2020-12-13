@@ -32,7 +32,7 @@ type Props = {
 /**
  * Accessibility practices implemented according to https://w3c.github.io/aria-practices/examples/dialog-modal/datepicker-dialog.html
  */
-function useDatePicker({ minDate, maxDate }: Props) {
+function useDatePicker({ minDate, maxDate }: Props = {}) {
   const [isOpen, setIsOpen] = React.useState(false);
   const [selectedDate, setSelectedDate] = React.useState<Date | null>(null);
   const [selectedDraftDateString, setSelectedDraftDateString] = React.useState<
