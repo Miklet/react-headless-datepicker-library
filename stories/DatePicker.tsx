@@ -1,15 +1,15 @@
 import React from 'react';
-
+import { useDatePicker } from '../src/useDatePicker';
 import {
-  CalendarWeekNamesRow,
-  CalendarWeekNameHeader,
-  CalendarWeekRow,
-  CalendarDayCell,
   Calendar,
+  CalendarDay,
+  CalendarDayCell,
   CalendarGrid,
+  CalendarWeekNameHeader,
+  CalendarWeekNamesRow,
+  CalendarWeekRow,
+  DateInput,
 } from './DatePicker.styles';
-
-import { useDatePicker } from './useDatePicker';
 
 const DAYS_OF_WEEK_NAMES = [
   'monday',
@@ -36,39 +36,45 @@ const MONTHS_OF_YEAR_NAMES = [
   'december',
 ];
 
-export function DatePicker() {
+type DatePickerProps = {
+  minDate?: Date;
+  maxDate?: Date;
+};
+
+export function DatePicker(props: DatePickerProps = {}) {
   const {
     isOpen,
     weeks,
     preselectedDate,
-    getInputProps,
+    getDateInputProps,
     getOpenButtonProps,
     getRootProps,
     getGridProps,
+    getGridItemProps,
     getPrevMonthButtonProps,
     getNextMonthButtonProps,
-    getLiveRegionProps,
-    getDateButtonProps,
-  } = useDatePicker();
+    getCurrentMonthLiveRegionProps,
+    getDayButtonProps,
+  } = useDatePicker(props);
 
-  const openButtonProps = getOpenButtonProps();
+  console.log(getPrevMonthButtonProps());
 
   return (
     <div>
       <div>
-        <input {...getInputProps()} />
-        <button {...openButtonProps}>📅</button>
+        <DateInput {...getDateInputProps()} placeholder="dd/MM/yyyy" />
+        <button {...getOpenButtonProps()}>📅</button>
       </div>
       {isOpen ? (
         <Calendar {...getRootProps()}>
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-            <div {...getLiveRegionProps()}>
+            <div {...getCurrentMonthLiveRegionProps()}>
               {MONTHS_OF_YEAR_NAMES[preselectedDate.getMonth()]}{' '}
               {preselectedDate.getFullYear()}
             </div>
             <div>
-              <button {...getNextMonthButtonProps()}>⬆</button>
-              <button {...getPrevMonthButtonProps()}>⬇</button>
+              <button {...getPrevMonthButtonProps()}>◀</button>
+              <button {...getNextMonthButtonProps()}>▶</button>
             </div>
           </div>
           <CalendarGrid {...getGridProps()}>
@@ -97,11 +103,16 @@ export function DatePicker() {
                       ) : (
                         <CalendarDayCell
                           key={day.date.getTime()}
-                          isSelected={day.isSelected}
-                          isPreselected={day.isPreselected}
-                          {...getDateButtonProps(day.date)}
+                          {...getGridItemProps()}
                         >
-                          {day.date.getDate()}
+                          <CalendarDay
+                            isSelected={day.isSelected}
+                            isPreselected={day.isPreselected}
+                            isBlocked={day.isBlocked}
+                            {...getDayButtonProps(day)}
+                          >
+                            {day.date.getDate()}
+                          </CalendarDay>
                         </CalendarDayCell>
                       );
                     })}
