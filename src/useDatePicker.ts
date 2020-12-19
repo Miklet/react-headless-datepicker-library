@@ -27,12 +27,13 @@ type CalendarDay = {
 type Props = {
   minDate?: Date;
   maxDate?: Date;
+  debug?: boolean;
 };
 
 /**
  * Accessibility practices implemented according to https://w3c.github.io/aria-practices/examples/dialog-modal/datepicker-dialog.html
  */
-function useDatePicker({ minDate, maxDate }: Props = {}) {
+function useDatePicker({ minDate, maxDate, debug }: Props = {}) {
   const [isOpen, setIsOpen] = React.useState(false);
   const [selectedDate, setSelectedDate] = React.useState<Date | null>(null);
   const [selectedDraftDateString, setSelectedDraftDateString] = React.useState<
@@ -40,7 +41,6 @@ function useDatePicker({ minDate, maxDate }: Props = {}) {
   >(null);
   const [preselectedDate, setPreselectedDate] = React.useState(new Date());
 
-  const rootRef = React.useRef<HTMLElement | null>(null);
   const openButtonRef = React.useRef<HTMLButtonElement | null>(null);
 
   const focusTrapRef = React.useRef<FocusTrap | null>(null);
@@ -101,49 +101,56 @@ function useDatePicker({ minDate, maxDate }: Props = {}) {
     [] as Array<Array<null | CalendarDay>>
   );
 
-  React.useEffect(() => {
-    if (isOpen) {
-      if (rootRef.current) {
-        if (!focusTrapRef.current) {
-          focusTrapRef.current = createFocusTrap(rootRef.current, {
-            onActivate: () => {
-              const dateToFocus = selectedDate
-                ? selectedDate.getDate()
-                : preselectedDate.getDate();
+  const setupFocusTrap = React.useCallback(
+    (node: HTMLElement) => {
+      if (node && !focusTrapRef.current) {
+        focusTrapRef.current = createFocusTrap(node, {
+          onActivate: () => {
+            const dateToFocus = selectedDate || preselectedDate;
 
-              const dateToFocusNode = daysNodesRefs.current[dateToFocus];
+            const dateToFocusNode =
+              daysNodesRefs.current[dateToFocus.getDate()];
 
-              if (dateToFocusNode) {
-                dateToFocusNode.focus();
-              }
-            },
-            onDeactivate: () => {
-              setIsOpen(false);
-              window.setTimeout(() => openButtonRef.current?.focus(), 0);
-            },
-            clickOutsideDeactivates: true,
-          });
+            if (dateToFocusNode) {
+              debug &&
+                console.log(
+                  'Initial focus set to:',
+                  dateToFocus.toDateString()
+                );
 
-          focusTrapRef.current.activate();
+              dateToFocusNode.focus();
+            }
+          },
+          onDeactivate: () => {
+            setIsOpen(false);
+            // According to focus-trap docs, it's recommended to update focused element in the next tick
+            window.setTimeout(() => {
+              openButtonRef.current?.focus();
+            }, 0);
+          },
+          clickOutsideDeactivates: true,
+        });
+
+        debug && console.log('Trap activated');
+        focusTrapRef.current.activate();
+      }
+
+      if (!node && !isOpen) {
+        if (focusTrapRef.current) {
+          console.log('deactivating trap');
+          focusTrapRef.current.deactivate();
+          focusTrapRef.current = null;
         }
       }
-    } else {
-      focusTrapRef.current?.deactivate();
-    }
-
-    return () => {
-      if (!isOpen) {
-        focusTrapRef.current?.deactivate();
-      }
-
-      focusTrapRef.current = null;
-    };
-  }, [isOpen, selectedDate, preselectedDate]);
+    },
+    [isOpen, selectedDate, preselectedDate]
+  );
 
   React.useEffect(() => {
     const currentPreselectedDay = daysNodesRefs.current[currentPreselectedDate];
 
     if (canUpdateFocusedDay.current && currentPreselectedDay) {
+      debug && console.log('Focus set to:', preselectedDate.toDateString());
       currentPreselectedDay.focus();
     }
   }, [currentPreselectedDate]);
@@ -175,9 +182,7 @@ function useDatePicker({ minDate, maxDate }: Props = {}) {
         role: 'dialog' as const,
         'aria-modal': true,
         'aria-label': 'Choose date',
-        ref(node: HTMLElement | null) {
-          rootRef.current = node;
-        },
+        ref: setupFocusTrap,
       };
     },
 
@@ -203,18 +208,6 @@ function useDatePicker({ minDate, maxDate }: Props = {}) {
               setSelectedDate(parsedDate);
               setPreselectedDate(parsedDate);
               setSelectedDraftDateString(null);
-            } else {
-              const fallbackParsedDate = new Date(selectedDraftDateString);
-
-              if (isValid(fallbackParsedDate)) {
-                setSelectedDate(fallbackParsedDate);
-                setPreselectedDate(fallbackParsedDate);
-                setSelectedDraftDateString(null);
-              } else {
-                setSelectedDate(new Date());
-                setPreselectedDate(new Date());
-                setSelectedDraftDateString(null);
-              }
             }
           }
         },
@@ -228,7 +221,7 @@ function useDatePicker({ minDate, maxDate }: Props = {}) {
               new Date()
             );
 
-            if (isDate(parsedDate)) {
+            if (isValid(parsedDate)) {
               setSelectedDate(parsedDate);
             }
           } catch {}
@@ -364,6 +357,18 @@ function useDatePicker({ minDate, maxDate }: Props = {}) {
         },
       };
     },
+  };
+}
+
+if (process.env.NODE_ENV === 'development') {
+  window.debugActiveElement = () => {
+    const intervalId = window.setInterval(() => {
+      console.log(document.activeElement);
+    }, 1000);
+
+    window.addEventListener('unload', () => {
+      window.clearInterval(intervalId);
+    });
   };
 }
 

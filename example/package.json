@@ -5,9 +5,12 @@
   "license": "MIT",
   "scripts": {
     "start": "parcel index.html",
+    "start:material-ui": "parcel ./material-ui/index.html",
     "build": "parcel build index.html"
   },
   "dependencies": {
+    "@material-ui/core": "^4.11.2",
+    "@material-ui/icons": "^4.11.2",
     "react-app-polyfill": "^1.0.0"
   },
   "alias": {
