@@ -121,7 +121,7 @@ const App = () => {
       >
         <Paper className={styles.root} {...getRootProps()}>
           <div className={styles.navigation}>
-            <IconButton disableFocusRipple {...getPrevMonthButtonProps()}>
+            <IconButton {...getPrevMonthButtonProps()}>
               <ChevronLeft />
             </IconButton>
             <div {...getCurrentMonthLiveRegionProps()}>

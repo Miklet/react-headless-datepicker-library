@@ -5,7 +5,6 @@ import {
   endOfWeek,
   format,
   getDaysInMonth,
-  isDate,
   isSameDay,
   isValid,
   lastDayOfMonth,
@@ -341,8 +340,6 @@ function useDatePicker({ minDate, maxDate, debug }: Props = {}) {
             if (selectedDraftDateString) {
               setSelectedDraftDateString(null);
             }
-
-            focusTrapRef.current?.deactivate();
           }
         },
         onClick() {
@@ -352,8 +349,6 @@ function useDatePicker({ minDate, maxDate, debug }: Props = {}) {
           if (selectedDraftDateString) {
             setSelectedDraftDateString(null);
           }
-
-          focusTrapRef.current?.deactivate();
         },
       };
     },
