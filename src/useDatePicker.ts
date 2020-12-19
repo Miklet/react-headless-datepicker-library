@@ -27,12 +27,20 @@ type Props = {
   minDate?: Date;
   maxDate?: Date;
   debug?: boolean;
+  isClosedOnSelect?: boolean;
+  isSelectedDateSetOnKeyboardNavigation?: boolean;
 };
 
 /**
  * Accessibility practices implemented according to https://w3c.github.io/aria-practices/examples/dialog-modal/datepicker-dialog.html
  */
-function useDatePicker({ minDate, maxDate, debug }: Props = {}) {
+function useDatePicker({
+  minDate,
+  maxDate,
+  debug,
+  isClosedOnSelect = true,
+  isSelectedDateSetOnKeyboardNavigation = false,
+}: Props = {}) {
   const [isOpen, setIsOpen] = React.useState(false);
   const [selectedDate, setSelectedDate] = React.useState<Date | null>(null);
   const [selectedDraftDateString, setSelectedDraftDateString] = React.useState<
@@ -309,37 +317,76 @@ function useDatePicker({ minDate, maxDate, debug }: Props = {}) {
 
           if (event.key === 'ArrowRight') {
             internalSetPreselectedDate(addDays(preselectedDate, 1));
+
+            if (isSelectedDateSetOnKeyboardNavigation) {
+              internalSetSelectedDate(addDays(preselectedDate, 1));
+            }
           } else if (event.key === 'ArrowLeft') {
             internalSetPreselectedDate(addDays(preselectedDate, -1));
+
+            if (isSelectedDateSetOnKeyboardNavigation) {
+              internalSetSelectedDate(addDays(preselectedDate, -1));
+            }
           } else if (event.key === 'ArrowUp') {
             internalSetPreselectedDate(addDays(preselectedDate, -7));
+
+            if (isSelectedDateSetOnKeyboardNavigation) {
+              internalSetSelectedDate(addDays(preselectedDate, -7));
+            }
           } else if (event.key === 'ArrowDown') {
             internalSetPreselectedDate(addDays(preselectedDate, 7));
+
+            if (isSelectedDateSetOnKeyboardNavigation) {
+              internalSetSelectedDate(addDays(preselectedDate, 7));
+            }
           } else if (event.key === 'Home') {
             internalSetPreselectedDate(
               startOfWeek(preselectedDate, {
                 weekStartsOn: 1,
               })
             );
+            if (isSelectedDateSetOnKeyboardNavigation) {
+              internalSetSelectedDate(
+                startOfWeek(preselectedDate, {
+                  weekStartsOn: 1,
+                })
+              );
+            }
           } else if (event.key === 'End') {
             internalSetPreselectedDate(
               endOfWeek(preselectedDate, {
                 weekStartsOn: 1,
               })
             );
+            if (isSelectedDateSetOnKeyboardNavigation) {
+              internalSetSelectedDate(
+                endOfWeek(preselectedDate, {
+                  weekStartsOn: 1,
+                })
+              );
+            }
           } else if (event.key === 'PageUp') {
             internalSetPreselectedDate(addMonths(preselectedDate, -1));
+            if (isSelectedDateSetOnKeyboardNavigation) {
+              internalSetSelectedDate(addMonths(preselectedDate, -1));
+            }
           } else if (event.key === 'PageDown') {
             internalSetPreselectedDate(addMonths(preselectedDate, 1));
+            if (isSelectedDateSetOnKeyboardNavigation) {
+              internalSetSelectedDate(addMonths(preselectedDate, 1));
+            }
           } else if (event.key === 'Enter' || event.key === 'Space') {
             event.preventDefault();
 
-            internalSetSelectedDate(preselectedDate);
-            internalSetPreselectedDate(preselectedDate);
+            if (!isSelectedDateSetOnKeyboardNavigation) {
+              internalSetSelectedDate(preselectedDate);
+            }
 
             if (selectedDraftDateString) {
               setSelectedDraftDateString(null);
             }
+
+            focusTrapRef.current?.deactivate();
           }
         },
         onClick() {
@@ -348,6 +395,10 @@ function useDatePicker({ minDate, maxDate, debug }: Props = {}) {
 
           if (selectedDraftDateString) {
             setSelectedDraftDateString(null);
+          }
+
+          if (isClosedOnSelect) {
+            focusTrapRef.current?.deactivate();
           }
         },
       };

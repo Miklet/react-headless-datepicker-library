@@ -84,7 +84,10 @@ const App = () => {
     getGridProps,
     getNextMonthButtonProps,
     getPrevMonthButtonProps,
-  } = useDatePicker();
+  } = useDatePicker({
+    isClosedOnSelect: false,
+    isSelectedDateSetOnKeyboardNavigation: true,
+  });
 
   return (
     <div
