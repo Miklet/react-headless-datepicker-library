@@ -2,7 +2,7 @@ import { isBefore, isAfter, isSameDay } from 'date-fns';
 
 function range(
   length: number,
-  mapper: (index: number) => number = index => index
+  mapper: (index: number) => number = (index) => index
 ): Array<number> {
   return Array.from({ length }, (_, index) => mapper(index));
 }

@@ -16,19 +16,75 @@ import { createFocusTrap, FocusTrap } from 'focus-trap';
 import React from 'react';
 import { isDateOutsideOfRange, range } from './utils';
 
-type CalendarDay = {
+export type DatePickerCalendarDay = {
   date: Date;
   isSelected: boolean;
   isPreselected: boolean;
   isBlocked: boolean;
 };
 
-type Props = {
+export type DatePickerProps = {
   minDate?: Date;
   maxDate?: Date;
   debug?: boolean;
   isClosedOnSelect?: boolean;
   isSelectedDateSetOnKeyboardNavigation?: boolean;
+};
+
+export type DatePickerResult = {
+  isOpen: boolean;
+  selectedDate: Date | null;
+  preselectedDate: Date;
+  weeks: Array<Array<DatePickerCalendarDay | null>>;
+  getRootProps: () => {
+    role: 'dialog';
+    'aria-modal': boolean;
+    'aria-label': string;
+    ref: React.RefCallback<HTMLElement>;
+  };
+  getDateInputProps: () => {
+    type: 'text';
+    'aria-label': string;
+    value: string;
+    onBlur: () => void;
+    onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  };
+  getOpenButtonProps: () => {
+    ref: React.MutableRefObject<HTMLButtonElement | null>;
+    'aria-label': string;
+    onClick: () => void;
+  };
+  getPrevMonthButtonProps: () => {
+    disabled: boolean;
+    'aria-label': string;
+    onClick: () => void;
+  };
+  getNextMonthButtonProps: () => {
+    disabled: boolean;
+    'aria-label': string;
+    onClick: () => void;
+  };
+  getCurrentMonthLiveRegionProps: () => {
+    id: string | undefined;
+    'aria-live': 'polite';
+  };
+  getGridProps: () => {
+    role: 'grid';
+    'aria-labelledby': string | undefined;
+  };
+  getGridItemProps: () => {
+    role: 'gridcell';
+  };
+  getDayButtonProps: (
+    day: DatePickerCalendarDay
+  ) => {
+    'aria-label': string;
+    ref: React.RefCallback<HTMLElement | null>;
+    tabIndex: 0 | -1;
+    disabled: boolean;
+    onKeyDown: (event: React.KeyboardEvent<HTMLElement>) => void;
+    onClick: (event: React.MouseEvent<HTMLElement>) => void;
+  };
 };
 
 /**
@@ -40,7 +96,7 @@ function useDatePicker({
   debug,
   isClosedOnSelect = true,
   isSelectedDateSetOnKeyboardNavigation = false,
-}: Props = {}) {
+}: DatePickerProps = {}): DatePickerResult {
   const [isOpen, setIsOpen] = React.useState(false);
   const [selectedDate, setSelectedDate] = React.useState<Date | null>(null);
   const [selectedDraftDateString, setSelectedDraftDateString] = React.useState<
@@ -70,7 +126,7 @@ function useDatePicker({
 
   const daysForCurrentMonthView = [
     ...range(firstDayOfWeekForCurrentMonthView, () => -1),
-    ...range(daysInMonth, index => index + 1),
+    ...range(daysInMonth, (index) => index + 1),
   ];
 
   const weeksForCurrentMonthView = daysForCurrentMonthView.reduce(
@@ -105,7 +161,7 @@ function useDatePicker({
 
       return weeks;
     },
-    [] as Array<Array<null | CalendarDay>>
+    [] as Array<Array<null | DatePickerCalendarDay>>
   );
 
   const setupFocusTrap = React.useCallback(
@@ -144,13 +200,13 @@ function useDatePicker({
 
       if (!node && !isOpen) {
         if (focusTrapRef.current) {
-          console.log('deactivating trap');
+          debug && console.log('deactivating trap');
           focusTrapRef.current.deactivate();
           focusTrapRef.current = null;
         }
       }
     },
-    [isOpen, selectedDate, preselectedDate]
+    [isOpen, selectedDate, preselectedDate, debug]
   );
 
   React.useEffect(() => {
@@ -160,7 +216,7 @@ function useDatePicker({
       debug && console.log('Focus set to:', preselectedDate.toDateString());
       currentPreselectedDay.focus();
     }
-  }, [currentPreselectedDate]);
+  }, [currentPreselectedDate, preselectedDate, debug]);
 
   function internalSetSelectedDate(date: Date) {
     if (isDateOutsideOfRange({ date, minDate, maxDate })) {
@@ -246,7 +302,7 @@ function useDatePicker({
             )}`
           : 'Choose date',
         onClick() {
-          setIsOpen(prevIsOpen => !prevIsOpen);
+          setIsOpen((prevIsOpen) => !prevIsOpen);
         },
       };
     },
@@ -301,7 +357,7 @@ function useDatePicker({
       };
     },
 
-    getDayButtonProps(day: CalendarDay) {
+    getDayButtonProps(day: DatePickerCalendarDay) {
       return {
         'aria-label': day.date.toDateString(),
         ref(node: HTMLElement | null) {

@@ -24,6 +24,9 @@
   "peerDependencies": {
     "react": ">=16"
   },
+  "resolutions": {
+    "prettier": "^2.2.1"
+  },
   "husky": {
     "hooks": {
       "pre-commit": "tsdx lint"
